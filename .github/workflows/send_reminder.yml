@@ -2,10 +2,8 @@ name: Send Daily Pickup Reminders
 
 on:
   schedule:
-    # Runs at 10:00 AM UTC = 1:00 PM EAT (East Africa Time)
-  - cron: '06 11 * * *'
-  
-  # Allows manual run from the GitHub Actions tab
+    # Runs at 11:20 AM UTC = 2:20 PM EAT (today)
+    - cron: '20 11 * * *'
   workflow_dispatch:
 
 jobs:
