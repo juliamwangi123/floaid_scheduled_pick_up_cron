@@ -16,7 +16,7 @@ const ONESIGNAL_APP_ID = process.env.ONESIGNAL_APP_ID;
 const ONESIGNAL_API_KEY = process.env.ONESIGNAL_API_KEY;
 
 // Android notification channel ID (must match the one you created in OneSignal)
-const ANDROID_CHANNEL_ID = 'pickup_reminders';
+// const ANDROID_CHANNEL_ID = 'pickup_reminders';
 
 // Function to send notification to a specific user
 async function sendOneSignalNotification(userId, title, message) {
@@ -26,7 +26,7 @@ async function sendOneSignalNotification(userId, title, message) {
       include_external_user_ids: [userId],
       headings: { en: title },
       contents: { en: message },
-      android_channel_id: ANDROID_CHANNEL_ID,
+    //   android_channel_id: ANDROID_CHANNEL_ID,
     };
 
     const headers = {
