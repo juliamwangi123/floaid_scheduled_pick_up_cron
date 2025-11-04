@@ -2,7 +2,7 @@ name: Send Daily Pickup Reminders
 
 on:
   schedule:
-    - cron: '20 12 * * *'
+    - cron: '20 3 * * *'
   workflow_dispatch:
 
 jobs:
