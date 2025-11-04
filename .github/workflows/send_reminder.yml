@@ -2,8 +2,8 @@ name: Send Daily Pickup Reminders
 
 on:
   schedule:
-    # Runs at 11:20 AM UTC = 2:20 PM EAT (today)
-    - cron: '20 11 * * *'
+    # Runs every 5 minutes (for testing)
+    - cron: '*/5 * * * *'
   workflow_dispatch:
 
 jobs:
