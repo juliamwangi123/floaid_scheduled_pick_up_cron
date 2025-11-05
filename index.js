@@ -26,7 +26,7 @@ async function sendOneSignalNotification(userId, title, message) {
         include_external_user_ids: [userId],
         headings: { en: title },
         contents: { en: message },
-        android_channel_id: 'pickup_reminders'
+    
       },
       {
         headers: {
@@ -105,7 +105,7 @@ async function checkAndSendReminders() {
 
 // Schedule cron job to run every day at 9:00 AM East Africa Time
 // EAT is UTC+3, so 9 AM EAT = 6 AM UTC
-cron.schedule('0 6 * * *', () => {
+cron.schedule('0 7 * * *', () => {
   console.log('⏰ Cron job triggered at:', new Date().toISOString());
   checkAndSendReminders();
 }, {
