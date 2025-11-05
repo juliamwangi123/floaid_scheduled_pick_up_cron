@@ -105,7 +105,7 @@ async function checkAndSendReminders() {
 
 // Schedule cron job to run every day at 9:00 AM East Africa Time
 // EAT is UTC+3, so 9 AM EAT = 6 AM UTC
-cron.schedule('0 7 * * *', () => {
+cron.schedule('20 7 * * *', () => {
   console.log('⏰ Cron job triggered at:', new Date().toISOString());
   checkAndSendReminders();
 }, {
