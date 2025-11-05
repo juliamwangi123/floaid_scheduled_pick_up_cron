@@ -2,3 +2,4 @@ node_modules/
 serviceAccountKey.json
 *.log
 .env
+.DS_Store
