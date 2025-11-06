@@ -2,6 +2,7 @@ const cron = require('node-cron');
 const admin = require('firebase-admin');
 const axios = require('axios');
 const express = require('express');
+require('dotenv').config()
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -26,7 +27,6 @@ async function sendOneSignalNotification(userId, title, message) {
         include_external_user_ids: [userId],
         headings: { en: title },
         contents: { en: message },
-    
       },
       {
         headers: {
@@ -45,50 +45,99 @@ async function sendOneSignalNotification(userId, title, message) {
   }
 }
 
+function getDaysUntilPickup(pickupDate) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  const pickup = new Date(pickupDate);
+  pickup.setHours(0, 0, 0, 0);
+  
+  const diffTime = pickup - today;
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  
+  return diffDays;
+}
+
+function getNotificationMessage(fullName, daysUntil) {
+  switch(daysUntil) {
+    case 0:
+      return `Hi ${fullName}! Your donation pickup is TODAY! Please have your items ready for collection. Thank you for your generosity! 💚`;
+    case 1:
+      return `Hi ${fullName}! Your donation pickup is TOMORROW! Please have your items ready for collection. Thank you for your generosity! 💚`;
+    case 2:
+      return `Hi ${fullName}! Your donation pickup is in 2 days. Please have your items ready for collection. Thank you for your generosity! 💚`;
+    case 3:
+      return `Hi ${fullName}! Your donation pickup is in 3 days. Please have your items ready for collection. Thank you for your generosity! 💚`;
+    default:
+      return `Hi ${fullName}! Your donation pickup is coming up. Please have your items ready for collection. Thank you for your generosity! 💚`;
+  }
+}
+
 async function checkAndSendReminders() {
   console.log('🚀 Starting pickup reminder check...');
   console.log('⏰ Current time:', new Date().toISOString());
   
   try {
-    // Calculate date 3 days from now
     const today = new Date();
-    const threeDaysFromNow = new Date(today);
-    threeDaysFromNow.setDate(today.getDate() + 3);
     
-    // Format as YYYY-MM-DD
-    const targetDate = threeDaysFromNow.toISOString().split('T')[0];
+    // Calculate dates for today, tomorrow, 2 days, and 3 days from now
+    const dates = [];
+    for (let i = 0; i <= 3; i++) {
+      const date = new Date(today);
+      date.setDate(today.getDate() + i);
+      dates.push(date.toISOString().split('T')[0]);
+    }
     
-    console.log('📅 Looking for pickups scheduled on:', targetDate);
+    console.log('📅 Looking for pickups on:', dates);
     
-    // Query Firebase Realtime Database
+    // Get all scheduled pickups
     const snapshot = await admin.database()
       .ref('scheduled_pickups')
-      .orderByChild('pickupDate')
-      .equalTo(targetDate)
       .once('value');
     
-    const pickups = snapshot.val();
+    const allPickups = snapshot.val();
     
-    if (!pickups || Object.keys(pickups).length === 0) {
-      console.log('ℹ️ No pickups found for', targetDate);
+    if (!allPickups) {
+      console.log('ℹ️ No pickups found in database');
       return;
     }
     
-    console.log('✅ Found', Object.keys(pickups).length, 'pickup(s)');
+    // Filter pickups that fall within the 3-day window
+    const upcomingPickups = [];
+    
+    for (const pickupId in allPickups) {
+      const pickup = allPickups[pickupId];
+      
+      if (dates.includes(pickup.pickupDate)) {
+        const daysUntil = getDaysUntilPickup(pickup.pickupDate);
+        upcomingPickups.push({
+          ...pickup,
+          pickupId,
+          daysUntil
+        });
+      }
+    }
+    
+    if (upcomingPickups.length === 0) {
+      console.log('ℹ️ No pickups found within the next 3 days');
+      return;
+    }
+    
+    console.log('✅ Found', upcomingPickups.length, 'upcoming pickup(s)');
     
     // Send notification to each user
     const promises = [];
     
-    for (const pickupId in pickups) {
-      const pickup = pickups[pickupId];
+    for (const pickup of upcomingPickups) {
+      console.log(`📤 Preparing notification for: ${pickup.fullName} (${pickup.uId}) - ${pickup.daysUntil} day(s) until pickup`);
       
-      console.log('📤 Preparing notification for:', pickup.fullName, `(${pickup.uId})`);
+      const message = getNotificationMessage(pickup.fullName, pickup.daysUntil);
       
       promises.push(
         sendOneSignalNotification(
           pickup.uId,
           'Pickup Reminder 📦',
-          `Hi ${pickup.fullName}! Your donation pickup is in 3 days. Please have your items ready for collection. Thank you for your generosity! 💚`
+          message
         )
       );
     }
@@ -103,9 +152,9 @@ async function checkAndSendReminders() {
   }
 }
 
-// Schedule cron job to run every day at 9:00 AM East Africa Time
-// EAT is UTC+3, so 9 AM EAT = 6 AM UTC
-cron.schedule('20 7 * * *', () => {
+// Schedule cron job to run every day at 10:00 AM East Africa Time
+// EAT is UTC+3, so 10 AM EAT = 7 AM UTC
+cron.schedule('0 7 * * *', () => {
   console.log('⏰ Cron job triggered at:', new Date().toISOString());
   checkAndSendReminders();
 }, {
@@ -117,7 +166,7 @@ app.get('/', (req, res) => {
   res.json({
     status: 'running',
     message: 'Pickup Reminder Service is active! 🚀',
-    nextRun: 'Every day at 9:00 AM EAT'
+    nextRun: 'Every day at 10:00 AM EAT'
   });
 });
 
@@ -132,7 +181,7 @@ app.get('/trigger', async (req, res) => {
 app.listen(PORT, () => {
   console.log('🚀 Pickup Reminder Service started!');
   console.log(`🌐 Server running on port ${PORT}`);
-  console.log('⏰ Scheduled to run every day at 9:00 AM EAT');
+  console.log('⏰ Scheduled to run every day at 10:00 AM EAT');
   console.log('📅 Current time:', new Date().toISOString());
   
   // Run once on startup for testing
